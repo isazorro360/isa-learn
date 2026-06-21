@@ -1,15 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../supabase';
 
 export type BookmarkDoc = {
   id: string;
@@ -25,52 +14,67 @@ export type BookmarkDoc = {
   createdAt: Date;
 };
 
-export type BookmarkCreate = Omit<BookmarkDoc, 'id' | 'createdAt'>;
-
-const bookmarksCollection = collection(db, 'bookmarks');
-
-export const addBookmark = async (bookmark: BookmarkCreate) => {
-  const docRef = await addDoc(bookmarksCollection, {
-    ...bookmark,
-    createdAt: serverTimestamp(),
-  });
-  return docRef.id;
+type BookmarkRow = {
+  id: string;
+  user_id: string;
+  resource_id: string;
+  title: string;
+  subject: string;
+  category: string;
+  year: number;
+  description: string;
+  file_url: string;
+  file_name: string;
+  created_at: string | null;
 };
 
-export const getBookmarksForUser = async (userId: string) => {
-  const q = query(bookmarksCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
+const normalizeBookmark = (row: BookmarkRow): BookmarkDoc => ({
+  id: row.id,
+  userId: row.user_id,
+  resourceId: row.resource_id,
+  title: row.title,
+  subject: row.subject,
+  category: row.category,
+  year: row.year,
+  description: row.description,
+  fileUrl: row.file_url,
+  fileName: row.file_name,
+  createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+});
 
-  return snapshot.docs.map((docSnapshot) => {
-    const data = docSnapshot.data() as any;
-    return {
-      id: docSnapshot.id,
-      userId: data.userId,
-      resourceId: data.resourceId,
-      title: data.title,
-      subject: data.subject,
-      category: data.category,
-      year: data.year,
-      description: data.description,
-      fileUrl: data.fileUrl,
-      fileName: data.fileName,
-      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-    } as BookmarkDoc;
-  });
+export const getBookmarksForUser = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data as BookmarkRow[]).map((row) => normalizeBookmark(row));
+};
+
+export const addBookmark = async (bookmark: Omit<BookmarkDoc, 'id' | 'createdAt'>) => {
+  const { data, error } = await supabase
+    .from('bookmarks')
+    .insert({
+      user_id: bookmark.userId,
+      resource_id: bookmark.resourceId,
+      title: bookmark.title,
+      subject: bookmark.subject,
+      category: bookmark.category,
+      year: bookmark.year,
+      description: bookmark.description,
+      file_url: bookmark.fileUrl,
+      file_name: bookmark.fileName,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
 };
 
 export const removeBookmark = async (bookmarkId: string) => {
-  await deleteDoc(doc(bookmarksCollection, bookmarkId));
-};
-
-export const findBookmarkByResourceId = async (userId: string, resourceId: string) => {
-  const q = query(bookmarksCollection, where('userId', '==', userId), where('resourceId', '==', resourceId));
-  const snapshot = await getDocs(q);
-
-  return snapshot.docs.length > 0
-    ? {
-        id: snapshot.docs[0].id,
-        ...(snapshot.docs[0].data() as Omit<BookmarkDoc, 'id'>),
-      } as BookmarkDoc
-    : null;
+  const { error } = await supabase.from('bookmarks').delete().eq('id', bookmarkId);
+  if (error) throw error;
 };

@@ -1,53 +1,55 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  type QueryConstraint,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../supabase';
 import { PastQuestionDoc } from '../types';
 
-const pastQuestionsCollection = collection(db, 'past_questions');
-
-export type FirebasePastQuestion = Omit<PastQuestionDoc, 'id' | 'createdAt'> & {
-  createdAt: any;
+type PastQuestionRow = {
+  id: string;
+  title: string;
+  subject: string;
+  year: number;
+  category: 'Past Question' | 'Marking Scheme' | 'Notes';
+  description: string;
+  file_name: string;
+  file_url: string;
+  storage_path?: string | null;
+  uploaded_by: string;
+  created_at: string | null;
 };
 
-const normalizePastQuestion = (docSnap: any): PastQuestionDoc => {
-  const data = docSnap.data() as any;
-  const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
-
-  return {
-    id: docSnap.id,
-    title: data.title,
-    subject: data.subject,
-    year: data.year,
-    category: data.category,
-    description: data.description,
-    fileName: data.fileName,
-    fileUrl: data.fileUrl,
-    storagePath: data.storagePath,
-    uploadedBy: data.uploadedBy,
-    createdAt,
-  };
-};
+const normalizePastQuestion = (row: PastQuestionRow): PastQuestionDoc => ({
+  id: row.id,
+  title: row.title,
+  subject: row.subject,
+  year: row.year,
+  category: row.category,
+  description: row.description,
+  fileName: row.file_name,
+  fileUrl: row.file_url,
+  storagePath: row.storage_path || undefined,
+  uploadedBy: row.uploaded_by,
+  createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+});
 
 export const addPastQuestionToFirestore = async (
   data: Omit<PastQuestionDoc, 'id' | 'createdAt'>
 ) => {
-  const docRef = await addDoc(pastQuestionsCollection, {
-    ...data,
-    createdAt: serverTimestamp(),
-  });
-  return docRef.id;
+  const { data: inserted, error } = await supabase
+    .from('past_questions')
+    .insert({
+      title: data.title,
+      subject: data.subject,
+      year: data.year,
+      category: data.category,
+      description: data.description,
+      file_name: data.fileName,
+      file_url: data.fileUrl,
+      storage_path: data.storagePath,
+      uploaded_by: data.uploadedBy,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return inserted.id as string;
 };
 
 export const fetchPastQuestions = async (filters?: {
@@ -55,38 +57,51 @@ export const fetchPastQuestions = async (filters?: {
   year?: number;
   category?: string;
 }) => {
-  const constraints: QueryConstraint[] = [];
-  if (filters?.subject) constraints.push(where('subject', '==', filters.subject));
-  if (filters?.year) constraints.push(where('year', '==', filters.year));
-  if (filters?.category) constraints.push(where('category', '==', filters.category));
-  constraints.push(orderBy('createdAt', 'desc'));
+  let query = supabase
+    .from('past_questions')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-  const q = query(pastQuestionsCollection, ...constraints);
-  const snapshot = await getDocs(q);
+  if (filters?.subject) query = query.eq('subject', filters.subject);
+  if (filters?.year) query = query.eq('year', filters.year);
+  if (filters?.category) query = query.eq('category', filters.category);
 
-  return snapshot.docs.map((docSnap) => normalizePastQuestion(docSnap));
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as PastQuestionRow[]).map((row) => normalizePastQuestion(row));
 };
 
 export const fetchPastQuestionById = async (id: string) => {
-  const docRef = doc(pastQuestionsCollection, id);
-  const snapshot = await getDoc(docRef);
+  const { data, error } = await supabase
+    .from('past_questions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
 
-  if (!snapshot.exists()) {
-    return null;
-  }
-
-  return normalizePastQuestion(snapshot);
+  if (error) throw error;
+  return data ? normalizePastQuestion(data as PastQuestionRow) : null;
 };
 
 export const updatePastQuestion = async (
   id: string,
   data: Partial<Omit<PastQuestionDoc, 'id' | 'createdAt'>>
 ) => {
-  const docRef = doc(pastQuestionsCollection, id);
-  await updateDoc(docRef, data);
+  const updateData: Record<string, unknown> = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.subject !== undefined) updateData.subject = data.subject;
+  if (data.year !== undefined) updateData.year = data.year;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.fileName !== undefined) updateData.file_name = data.fileName;
+  if (data.fileUrl !== undefined) updateData.file_url = data.fileUrl;
+  if (data.storagePath !== undefined) updateData.storage_path = data.storagePath;
+  if (data.uploadedBy !== undefined) updateData.uploaded_by = data.uploadedBy;
+
+  const { error } = await supabase.from('past_questions').update(updateData).eq('id', id);
+  if (error) throw error;
 };
 
 export const deletePastQuestion = async (id: string) => {
-  const docRef = doc(pastQuestionsCollection, id);
-  await deleteDoc(docRef);
+  const { error } = await supabase.from('past_questions').delete().eq('id', id);
+  if (error) throw error;
 };

@@ -4,10 +4,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   loginUser,
   registerUser,
-  logoutUser,
   sendPasswordReset,
 } from '../services/auth';
 import useAuth from '../hooks/useAuth';
+import { isSupabaseConfigured, missingSupabaseConfigKeys } from '../supabase';
 
 function Auth() {
   const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
@@ -43,17 +43,17 @@ function Auth() {
       return;
     }
 
+    if (!isSupabaseConfigured) {
+      setErrorMessage(`Supabase is not configured yet. Add ${missingSupabaseConfigKeys.join(', ')} to your .env file and Vercel environment variables.`);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       if (mode === 'login') {
-        const credential = await loginUser(email, password);
-        if (credential.user && !credential.user.emailVerified) {
-          await logoutUser();
-          setErrorMessage('Please verify your email before signing in. Check your inbox for the verification link.');
-        } else {
-          navigate('/dashboard');
-        }
+        await loginUser(email, password);
+        navigate('/dashboard');
       } else if (mode === 'register') {
         await registerUser(email, password, name);
         setStatusMessage('Account created. Verification email sent — please confirm your address before signing in.');
@@ -135,6 +135,11 @@ function Auth() {
           )}
 
           {statusMessage && <div className="rounded-3xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200">{statusMessage}</div>}
+          {!isSupabaseConfigured && (
+            <div className="rounded-3xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+              Supabase needs real project values before login, registration, and password reset can work.
+            </div>
+          )}
           {errorMessage && <div className="rounded-3xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-900/20 dark:text-rose-200">{errorMessage}</div>}
 
           <button
@@ -184,30 +189,6 @@ function Auth() {
         <p className="mt-4 max-w-2xl leading-7">ISA Learn includes a clean login experience with password reset workflow design, ready for Firebase Authentication integration and secure student account management.</p>
       </div>
 
-      <div className="rounded-[2rem] border border-amber-200 bg-amber-50 px-8 py-8 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950 dark:text-amber-200">
-        <p className="text-sm uppercase tracking-[0.28em] text-amber-700 dark:text-amber-400">Development Mode</p>
-        <h3 className="mt-4 text-lg font-semibold">Quick Test Login</h3>
-        <p className="mt-3 text-sm">For local testing without Firebase emulator, use this test admin account:</p>
-        <div className="mt-4 space-y-3">
-          <p className="font-mono text-sm">
-            Email: <span className="font-semibold">admin@isaitech.com</span>
-          </p>
-          <p className="font-mono text-sm">
-            Password: <span className="font-semibold">AdminPass123</span>
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            localStorage.setItem('testAdminMode', 'true');
-            localStorage.setItem('testAdminEmail', 'admin@isaitech.com');
-            navigate('/admin');
-          }}
-          className="mt-6 rounded-3xl bg-amber-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600"
-        >
-          Test Admin Login
-        </button>
-      </div>
     </div>
   );
 }

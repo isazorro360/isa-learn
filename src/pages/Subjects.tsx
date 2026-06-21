@@ -40,3 +40,7 @@ function Subjects() {
 }
 
 export default Subjects;
+<Route
+  path="/subject/:subject"
+  element={<SubjectResources />}
+/>

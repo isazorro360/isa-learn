@@ -10,47 +10,6 @@ export default function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for test admin mode first
-    const testAdminMode = localStorage.getItem('testAdminMode') === 'true';
-    if (testAdminMode) {
-      // Mock admin user for testing
-      const mockUser = {
-        uid: 'test-admin-id',
-        email: 'admin@isaitech.com',
-        displayName: 'Test Admin',
-        isAnonymous: false,
-        metadata: {},
-        providerData: [],
-        refreshToken: '',
-        emailVerified: true,
-        phoneNumber: null,
-        isSignInWithEmailLink: false,
-        getIdToken: async () => 'test-token',
-        getIdTokenResult: async () => ({ token: 'test-token', claims: {}, signInProvider: null, signInTime: new Date().toISOString(), issuedAtTime: new Date().toISOString(), expirationTime: new Date().toISOString() }),
-        reload: async () => {},
-        toJSON: () => ({}),
-        delete: async () => {},
-        getDisplayName: () => 'Test Admin',
-        getEmail: () => 'admin@isaitech.com',
-        getPhoneNumber: () => null,
-        getPhotoURL: () => null,
-        getProviderId: () => 'firebase',
-        getUid: () => 'test-admin-id',
-      } as any as FirebaseUser;
-      
-      setUser(mockUser);
-      setProfile({
-        id: 'test-admin-id',
-        email: 'admin@isaitech.com',
-        displayName: 'Test Admin',
-        roles: ['admin'],
-        createdAt: new Date(),
-      });
-      setRoles(['admin']);
-      setLoading(false);
-      return;
-    }
-
     let active = true;
 
     const unsubscribe = authStateListener((currentUser) => {
@@ -70,16 +29,19 @@ export default function useAuth() {
 
       (async () => {
         try {
-          const existingProfile = await getUserProfile(currentUser.uid);
+          const existingProfile = await getUserProfile(currentUser.id);
           if (existingProfile) {
             if (active) {
               setProfile(existingProfile);
               setRoles(existingProfile.roles);
             }
           } else {
-            const displayName = currentUser.displayName || currentUser.email?.split('@')[0] || '';
-            await createOrUpdateUserProfile(currentUser.uid, currentUser.email ?? '', displayName, ['student']);
-            const newProfile = await getUserProfile(currentUser.uid);
+            const displayName =
+              (currentUser.user_metadata?.displayName as string | undefined) ||
+              currentUser.email?.split('@')[0] ||
+              '';
+            await createOrUpdateUserProfile(currentUser.id, currentUser.email ?? '', displayName, ['student']);
+            const newProfile = await getUserProfile(currentUser.id);
             if (active) {
               setProfile(newProfile);
               setRoles(newProfile?.roles ?? ['student']);

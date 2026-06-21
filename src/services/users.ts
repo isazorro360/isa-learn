@@ -1,37 +1,31 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../supabase';
 import type { UserProfileDoc } from '../types';
 
-const usersCollection = collection(db, 'users');
-
-const normalizeUserProfile = (docSnap: any): UserProfileDoc => {
-  const data = docSnap.data() as any;
-  return {
-    id: docSnap.id,
-    email: data.email,
-    displayName: data.displayName || '',
-    roles: Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : ['student'],
-    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-  };
+type UserProfileRow = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  roles: string[] | null;
+  created_at: string | null;
 };
 
+const normalizeUserProfile = (row: UserProfileRow): UserProfileDoc => ({
+  id: row.id,
+  email: row.email,
+  displayName: row.display_name || '',
+  roles: Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : ['student'],
+  createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+});
+
 export const getUserProfile = async (uid: string) => {
-  const userDoc = doc(usersCollection, uid);
-  const snapshot = await getDoc(userDoc);
-  if (!snapshot.exists()) {
-    return null;
-  }
-  return normalizeUserProfile(snapshot);
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', uid)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? normalizeUserProfile(data as UserProfileRow) : null;
 };
 
 export const createOrUpdateUserProfile = async (
@@ -40,31 +34,32 @@ export const createOrUpdateUserProfile = async (
   displayName: string,
   roles: string[] = ['student']
 ) => {
-  const userDoc = doc(usersCollection, uid);
+  const { error } = await supabase.from('users').upsert({
+    id: uid,
+    email,
+    display_name: displayName,
+    roles,
+  });
 
-  await setDoc(
-    userDoc,
-    {
-      email,
-      displayName,
-      roles,
-      createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-
+  if (error) throw error;
   return uid;
 };
 
 export const fetchAllUsers = async () => {
-  const q = query(usersCollection, orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((docSnap) => normalizeUserProfile(docSnap));
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data as UserProfileRow[]).map((row) => normalizeUserProfile(row));
 };
 
 export const updateUserRoles = async (uid: string, roles: string[]) => {
-  const userDocRef = doc(usersCollection, uid);
-  await updateDoc(userDocRef, {
-    roles,
-  });
+  const { error } = await supabase
+    .from('users')
+    .update({ roles })
+    .eq('id', uid);
+
+  if (error) throw error;
 };

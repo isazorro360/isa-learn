@@ -20,7 +20,7 @@ export default function useBookmarks() {
       setError('');
 
       try {
-        const docs = await getBookmarksForUser(user.uid);
+        const docs = await getBookmarksForUser(user.id);
         setBookmarks(docs);
       } catch (err) {
         console.error(err);
@@ -56,11 +56,11 @@ export default function useBookmarks() {
       return null;
     }
 
-    const newBookmarkId = await addBookmark({ ...bookmarkData, userId: user.uid });
+    const newBookmarkId = await addBookmark({ ...bookmarkData, userId: user.id });
     const newBookmark: BookmarkDoc = {
       id: newBookmarkId,
       ...bookmarkData,
-      userId: user.uid,
+      userId: user.id,
       createdAt: new Date(),
     };
 

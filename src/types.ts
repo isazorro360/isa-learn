@@ -45,6 +45,7 @@ export type PastQuestion = {
 export type PastQuestionDoc = {
   id: string;
   title: string;
+  level: 'SHS' | 'TVET' | 'Tertiary';
   subject: string;
   year: number;
   category: 'Past Question' | 'Marking Scheme' | 'Notes';

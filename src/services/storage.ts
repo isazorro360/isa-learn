@@ -1,36 +1,39 @@
-import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { storage } from '../firebase';
+import { supabase } from '../supabase';
 
-export const uploadPastQuestionPdf = (
+const BUCKET_NAME = 'past-questions';
+
+export const uploadPastQuestionPdf = async (
   file: File,
   subject: string,
   year: number,
   onProgress?: (progress: number) => void
 ) => {
   const safeSubject = subject.trim().replace(/\s+/g, '-').toLowerCase();
-  const storagePath = `past-questions/${safeSubject}/${year}/${Date.now()}-${file.name}`;
-  const storageRef = ref(storage, storagePath);
-  const uploadTask = uploadBytesResumable(storageRef, file, {
+  const filePath = `${safeSubject}/${year}/${Date.now()}-${file.name}`;
+
+  onProgress?.(10);
+
+  const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file, {
     contentType: file.type || 'application/pdf',
+    upsert: false,
   });
 
-  return new Promise<{ downloadUrl: string; filePath: string; fileName: string }>((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        onProgress?.(percent);
-      },
-      reject,
-      async () => {
-        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve({ downloadUrl, filePath: storagePath, fileName: file.name });
-      }
-    );
-  });
+  if (error) throw error;
+
+  onProgress?.(90);
+
+  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+
+  onProgress?.(100);
+
+  return {
+    downloadUrl: data.publicUrl,
+    filePath,
+    fileName: file.name,
+  };
 };
 
 export const deleteStorageFile = async (path: string) => {
-  const storageRef = ref(storage, path);
-  await deleteObject(storageRef);
+  const { error } = await supabase.storage.from(BUCKET_NAME).remove([path]);
+  if (error) throw error;
 };

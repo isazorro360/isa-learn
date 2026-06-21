@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
@@ -19,7 +19,8 @@
     "vite": "^8.0.16"
   },
   "dependencies": {
-    "firebase": "^12.14.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "firebase": "^12.15.0",
     "lucide-react": "^1.18.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

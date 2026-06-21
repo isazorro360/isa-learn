@@ -1,6 +1,3 @@
-import { app } from '../firebase';
-import { getAnalytics, isSupported } from 'firebase/analytics';
-
 const monitoringEndpoint = import.meta.env.VITE_MONITORING_ENDPOINT;
 
 function serializeError(error: unknown) {
@@ -46,16 +43,6 @@ async function reportToEndpoint(error: unknown, context?: Record<string, unknown
 export async function initMonitoring() {
   if (typeof window === 'undefined') {
     return;
-  }
-
-  if (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
-    try {
-      if (await isSupported()) {
-        getAnalytics(app);
-      }
-    } catch (analyticsError) {
-      console.error('Firebase analytics initialization failed', analyticsError);
-    }
   }
 
   window.addEventListener('error', (event) => {

@@ -108,14 +108,20 @@ VITE_FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
 VITE_FIREBASE_STORAGE_BUCKET=YOUR_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID=YOUR_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID=YOUR_FIREBASE_APP_ID
+VITE_USE_FIREBASE_EMULATORS=false
 ```
 
-4. Start development server:
+4. If you want to use the local Firebase emulators instead of a real Firebase project, set:
+```env
+VITE_USE_FIREBASE_EMULATORS=true
+```
+
+5. Start development server:
 ```bash
 npm run dev
 ```
 
-4. Open `http://localhost:4170` in your browser
+6. Open `http://localhost:4170/isa-learn/` in your browser
 
 ### Build for Production
 ```bash

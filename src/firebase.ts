@@ -2,15 +2,21 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
-import { firebaseConfig } from './firebase/config';
+import { firebaseConfig, isFirebaseReady, missingFirebaseConfigKeys, useFirebaseEmulators } from './firebase/config';
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Connect to emulator if in development
-if (import.meta.env.DEV) {
+if (!isFirebaseReady) {
+  console.warn(
+    `Firebase is missing required environment values: ${missingFirebaseConfigKeys.join(', ')}. ` +
+      'Add them to .env or set VITE_USE_FIREBASE_EMULATORS=true for local emulator testing.'
+  );
+}
+
+if (import.meta.env.DEV && useFirebaseEmulators) {
   try {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     console.log('Connected to Auth Emulator');

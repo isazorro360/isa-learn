@@ -1,72 +1,88 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  updateProfile,
-  User,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
-} from 'firebase/auth';
-import { auth } from '../firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../supabase';
 import { createOrUpdateUserProfile } from './users';
 
 export const ADMIN_EMAILS = ['admin@isaitech.com'];
 
 export type FirebaseUser = User | null;
 
-export const loginUser = (email: string, password: string) =>
-  signInWithEmailAndPassword(auth, email, password);
-
-export const registerUser = async (email: string, password: string, displayName: string) => {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  if (auth.currentUser) {
-    await updateProfile(auth.currentUser, { displayName });
-    await sendEmailVerification(auth.currentUser);
-    await createOrUpdateUserProfile(auth.currentUser.uid, email, displayName, ['student']);
-  }
-  return credential;
+export const loginUser = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return { user: data.user };
 };
 
-export const logoutUser = () => signOut(auth);
+export const registerUser = async (email: string, password: string, displayName: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { displayName },
+    },
+  });
 
-export const authStateListener = (callback: (user: FirebaseUser) => void) =>
-  onAuthStateChanged(auth, callback);
+  if (error) throw error;
 
-export const sendPasswordReset = (email: string) =>
-  sendPasswordResetEmail(auth, email);
+  if (data.user) {
+    await createOrUpdateUserProfile(data.user.id, email, displayName, ['student']);
+  }
 
-export const sendVerificationEmailToCurrentUser = () => {
-  if (!auth.currentUser) {
+  return { user: data.user };
+};
+
+export const logoutUser = () => supabase.auth.signOut();
+
+export const authStateListener = (callback: (user: FirebaseUser) => void) => {
+  supabase.auth.getUser().then(({ data }) => callback(data.user));
+
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user ?? null);
+  });
+
+  return () => data.subscription.unsubscribe();
+};
+
+export const sendPasswordReset = async (email: string) => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth`,
+  });
+  if (error) throw error;
+};
+
+export const sendVerificationEmailToCurrentUser = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) {
     throw new Error('No authenticated user available for verification email.');
   }
-  return sendEmailVerification(auth.currentUser);
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: user.email,
+  });
+
+  if (error) throw error;
 };
 
 export const isAdminUser = (user: FirebaseUser) =>
   !!user && !!user.email && ADMIN_EMAILS.includes(user.email);
 
-// Send sign-in link to user
 export const sendSignInLink = async (email: string, appUrl: string) => {
-  const actionCodeSettings = {
-    url: appUrl, // e.g., 'http://localhost:5173/auth?signinlink=true'
-    handleCodeInApp: true,
-  };
-  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-  // Save email in localStorage so user can see it after email verification
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: appUrl,
+    },
+  });
+  if (error) throw error;
   window.localStorage.setItem('emailForSignIn', email);
 };
 
-// Check if user clicked the email link
-export const handleEmailLinkSignIn = async (email?: string) => {
-  if (!isSignInWithEmailLink(auth, window.location.href)) {
-    throw new Error('Invalid sign-in link');
-  }
-  const savedEmail = email || window.localStorage.getItem('emailForSignIn') || '';
-  const credential = await signInWithEmailLink(auth, savedEmail, window.location.href);
+export const handleEmailLinkSignIn = async () => {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
   window.localStorage.removeItem('emailForSignIn');
-  return credential;
+  return { user: data.session?.user ?? null };
 };
