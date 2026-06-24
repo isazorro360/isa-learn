@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const normalizeEnvValue = (value: string | undefined) =>
+  value?.trim().replace(/,$/, '').replace(/^["']|["']$/g, '');
+
+const supabaseUrl = normalizeEnvValue(import.meta.env.VITE_SUPABASE_URL);
+const supabaseAnonKey = normalizeEnvValue(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const isMissingValue = (value: string | undefined) =>
   !value || value.trim() === '' || value.startsWith('YOUR_');
