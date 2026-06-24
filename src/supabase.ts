@@ -14,6 +14,6 @@ export const missingSupabaseConfigKeys = [
 export const isSupabaseConfigured = missingSupabaseConfigKeys.length === 0;
 
 export const supabase = createClient(
-  supabaseUrl || 'https://example.supabase.co',
-  supabaseAnonKey || 'missing-anon-key'
+  isSupabaseConfigured ? supabaseUrl : 'https://example.supabase.co',
+  isSupabaseConfigured ? supabaseAnonKey : 'missing-anon-key'
 );
