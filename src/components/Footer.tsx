@@ -1,4 +1,4 @@
-import { Mail, MessageCircle, Star, User } from 'lucide-react';
+import { Mail, MessageCircle, Star } from 'lucide-react';
 
 function Footer() {
   return (
@@ -27,7 +27,7 @@ function Footer() {
           <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Connect</h3>
           <div className="mt-4 flex items-center gap-3">
             <a href="#" className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-              <LinkedinIcon className="h-5 w-5" />
+              <span className="text-sm font-bold">in</span>
             </a>
             <a href="#" className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
               <Star className="h-5 w-5" />
