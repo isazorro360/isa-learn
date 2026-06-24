@@ -19,11 +19,12 @@ function Navbar({ darkMode, onToggleDarkMode, onToggleNotifications }: NavbarPro
     <header className="border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
       <div className="layout flex flex-wrap items-center justify-between gap-4 py-5">
         <Link to="/" className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-500/20">IS</span>
+           <img src="/public/logo.png" alt="ISA Learn Logo" width="40px"/>
           <span>ISA Learn</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
+           
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
