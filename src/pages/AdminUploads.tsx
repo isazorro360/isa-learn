@@ -241,8 +241,24 @@ function AdminUploads() {
           <p>Files are stored to Firebase Storage and indexed in Firestore for fast student access.</p>
         </div>
       </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.24em] text-sky-600">Manage uploads</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Uploaded past questions</h2>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Admins can view and delete past questions directly from this page.
+          </p>
+        </div>
+
+        <div className="rounded-[2rem] bg-transparent">
+          {/* Admin deletion UI */}
+          <QuestionManager />
+        </div>
+      </section>
     </div>
   );
 }
 
 export default AdminUploads;
+
